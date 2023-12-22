@@ -1,0 +1,107 @@
+﻿﻿@using MovieBlazor5.Data
+@using Microsoft.EntityFrameworkCore;
+
+@page "/tagpage/{tagCode?}"
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Теги фильмов</PageTitle>
+<h3>Теги фильмов</h3>
+
+<div class="input-box">
+    <input type="text" id="searchInput" placeholder="Введите название тега" required="true" @bind="SearchedLine">
+    <button id="buttonInput" @onclick="SearchTag">Поиск</button>
+</div>
+
+<style>
+    #searchInput {
+        width: 70%;
+    }
+
+    #buttonInput {
+        width: 15%;
+        margin: 10px;
+        background-color: mediumpurple;
+        color: white;
+        border-color: white;
+    }
+
+    .output-box-tag {
+        background-color: white;
+    }
+
+    .tag-link {
+        font-size: 16px;
+        color: saddlebrown;
+        text-decoration: none;
+    }
+
+        .tag-link:hover {
+            text-decoration: underline;
+            color: saddlebrown;
+        }
+</style>
+
+@if (!string.IsNullOrEmpty(tagCode))
+{
+    if(tagCode == "0")
+    {
+        <p>Тег не найден</p>
+    }
+    else
+    {
+        @using (ApplicationContext db = new ApplicationContext(false))
+        {
+            Tag currentTag = db.Tags.FirstOrDefault(tag => tag.Code == tagCode);
+            if (currentTag != null)
+            {
+                <h4>@currentTag.Name</h4>
+                var movies = db.Movies.Include(m => m.Tags)
+                    .Where(m => m.Tags.Any(t => t.Code == currentTag.Code));
+                if (movies.Count() > 0)
+                {
+                    currentTag.Movies = new HashSet<Movie>(movies);
+                    <div class="output-box-tag">
+                        <ul>
+                            @foreach (Movie movie in currentTag.Movies)
+                            {
+                                string link = "/moviepage/" + movie.MainTitle.Replace(" ", "%20") + "/" + movie.Code;
+                                <li><a class="tag-link" @onclick="() => NavigationManager.NavigateTo(link)">@movie.MainTitle</a></li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+            }
+        }
+    }
+}
+
+@code {
+    [Parameter]
+    public string? tagCode { get; set; }
+
+    public string SearchedLine = "";
+    public bool isLoading = false;
+
+    public void SearchTag()
+    {
+        if (SearchedLine != "")
+        {
+            Console.WriteLine("Начался поиск тега " + SearchedLine);
+            using (ApplicationContext db = new ApplicationContext(false))
+            {
+                Tag tryFindTag = db.Tags.FirstOrDefault(tag => tag.Name == SearchedLine);
+                if (tryFindTag != null)
+                {
+                    string url = $"/tagpage/{tryFindTag.Code}";
+                    NavigationManager.NavigateTo(url);
+                }
+                else
+                {
+                    NavigationManager.NavigateTo("/tagpage/0");
+                }
+            }
+        }
+    }
+}

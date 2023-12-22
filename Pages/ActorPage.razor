@@ -1,0 +1,248 @@
+﻿@using MovieBlazor5.Data
+@using Microsoft.EntityFrameworkCore;
+
+@page "/actorpage/{actorName?}/{actorCode?}"
+@inject NavigationManager NavigationManager
+
+<PageTitle>Поиск актера</PageTitle>
+<h3>Актеры</h3>
+
+<div class="input-box">
+    <input type="text" id="searchInput" placeholder="Введите имя актера" required="true" @bind="SearchedLine">
+    <button id="buttonInput" @onclick="SearchActor">Поиск</button>
+</div>
+
+<style>
+    #searchInput {
+        width: 70%;
+    }
+
+    #buttonInput {
+        width: 15%;
+        margin: 10px;
+        background-color: mediumpurple;
+        color: white;
+        border-color: white;
+    }
+
+    .link {
+        color: DarkSlateGray;
+        text-decoration: none;
+        cursor: pointer;
+        margin: 3px;
+    }
+
+        .link:hover {
+            text-decoration: underline;
+            color: DarkSlateGray;
+        }
+
+    .actor-link {
+        text-decoration: none;
+        color: mediumpurple;
+    }
+
+        .actor-link:hover {
+            text-decoration: underline;
+            color: mediumpurple;
+        }
+
+    .output-box-actor {
+        background-color: lavender;
+        min-width: 200px;
+        display: flex;
+        margin: 10px;
+    }
+
+    .info-div {
+        margin: 10px;
+        //background-color : skyblue;
+        min-width: 500px;
+    }
+</style>
+
+@if (!string.IsNullOrEmpty(actorName))
+{
+    if (actorName == "0")
+    {
+        <p>Актёр не найден</p>
+    }
+    else
+    {
+        if (!string.IsNullOrEmpty(actorCode))
+        {
+            @using(ApplicationContext db = new ApplicationContext(false))
+            {
+                Actor currentActor = db.Actors.FirstOrDefault(actor => actor.Code == actorCode);
+                Console.WriteLine("Актёр найден");
+                if (currentActor != null)
+                {
+                    var movies = db.Movies.Include(m => m.Actors)
+                            .Where(m => m.Actors.Any(a => a.Code == currentActor.Code));
+                    currentActor.Movies = new HashSet<Movie>(movies);
+                    Console.WriteLine("Найдены фильмы для актера");
+
+                    var directors = db.Movies.Include(m => m.Director).AsParallel()
+                        .Where(m => m.Director.Any(a => a.Code == currentActor.Code));
+                    currentActor.DirectedMovies = new HashSet<Movie>(directors);
+                    Console.WriteLine("Найдены фильмы для режиссера");
+
+
+                    @* FindMovies(currentActor);
+                    Console.WriteLine("Найдены фильмы для актера и режиссера"); *@
+
+
+                    <div class="output-box-actor">
+                        <div class="info-div">
+                            <h4>@currentActor.Name</h4>
+                            <p>Снял фильмы:
+                                @if (currentActor.DirectedMovies != null)
+                                {
+                                    <ul>
+                                        @foreach (Movie movie in currentActor.DirectedMovies)
+                                        {
+                                            string link = "/moviepage/" + movie.MainTitle.Replace(" ", "%20") + "/" + movie.Code;
+                                            <li><a class="link" @onclick="() => NavigationManager.NavigateTo(link)">@movie.MainTitle</a></li>
+                                        }
+                                    </ul>
+                                }
+                            </p>
+                            <p>Снимался фильмах:
+                                @if (currentActor.Movies != null)
+                                {
+                                    <ul>
+                                        @foreach (Movie movie in currentActor.Movies)
+                                        {
+                                            string link = "/moviepage/" + movie.MainTitle.Replace(" ", "%20") + "/" + movie.Code;
+                                            <li><a class="link" @onclick="() => NavigationManager.NavigateTo(link)">@movie.MainTitle</a></li>
+                                        }
+                                    </ul>
+                                }
+                            </p>
+                        </div>
+                    </div>
+                }
+            }
+        }
+        else
+        {
+            actorName.Replace("%20", " ");
+            @using (ApplicationContext db = new ApplicationContext(false))
+            {
+                var searchedActors = db.Actors.Where(actor => actor.Name == actorName);
+                Console.WriteLine("Актеры найдены");
+                if (searchedActors != null)
+                {
+                    foreach (Actor currentActor in searchedActors)
+                    {
+                        string linkA = "/actorpage/" + currentActor.Name.Replace(" ", "%20") + "/" + currentActor.Code;
+
+                        var movies = db.Movies.Include(m => m.Actors)
+                            .Where(m => m.Actors.Any(a => a.Code == currentActor.Code));
+                        currentActor.Movies = new HashSet<Movie>(movies);
+                        Console.WriteLine("Найдены фильмы для актера " + currentActor.Code);
+
+                        var directors = db.Movies.Include(m => m.Director).AsParallel()
+                            .Where(m => m.Director.Any(a => a.Code == currentActor.Code));
+                        currentActor.DirectedMovies = new HashSet<Movie>(directors);
+                        Console.WriteLine("Найдены фильмы для режиссера " + currentActor.Code);
+
+
+                        @* FindMovies(currentActor);
+                        Console.WriteLine("Найдены фильмы для актера и режиссера " + currentActor.Code); *@
+
+                         <div class="output-box-actor">
+                            <div class="info-div">
+                                <h4><a class="actor-link" @onclick="() => NavigationManager.NavigateTo(linkA)">@currentActor.Name</a></h4>
+                                <p>Снял фильмы:
+                                    @if (currentActor.DirectedMovies != null)
+                                    {
+                                        <ul>
+                                        @foreach (Movie movie in currentActor.DirectedMovies)
+                                        {
+                                            string linkM = "/moviepage/" + movie.MainTitle.Replace(" ", "%20") + "/" + movie.Code;
+                                            <li><a class="link" @onclick="() => NavigationManager.NavigateTo(linkM)">@movie.MainTitle</a></li>
+                                        }
+                                    </ul>
+                                    }
+                                </p>
+                                <p>Снимался фильмах:
+                                @if (currentActor.Movies != null)
+                                {
+                                    <ul>
+                                    @foreach (Movie movie in currentActor.Movies)
+                                    {
+                                        string link = "/moviepage/" + movie.MainTitle.Replace(" ", "%20") + "/" + movie.Code;
+                                        <li><a class="link" @onclick="() => NavigationManager.NavigateTo(link)">@movie.MainTitle</a></li>
+                                    }
+                                    </ul>
+                                }
+                                </p>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+        }
+    }
+}
+
+@code {
+    [Parameter]
+    public string? actorName { get; set; }
+    [Parameter]
+    public string? actorCode { get; set; }
+
+    public string SearchedLine = "";
+    public bool isLoading = false;
+
+    public void SearchActor()
+    {
+        if (SearchedLine != "")
+        {
+            Console.WriteLine("Начался поиск актера " + SearchedLine);
+            using (ApplicationContext db = new ApplicationContext(false))
+            {
+                Actor tryFindActor = db.Actors.FirstOrDefault(actor => actor.Name  == SearchedLine);
+                if (tryFindActor != null)
+                {
+                    //arrayImg = new string[codes.Count];
+                    string link = "/actorpage/" + SearchedLine.Replace(" ", "%20");
+                    NavigationManager.NavigateTo(link);
+                }
+                else
+                {
+                    NavigationManager.NavigateTo("/actorpage/0");
+                }
+            }
+        }
+    }
+    // public void FindMovies(Actor actor)
+    // {
+    //     using (ApplicationContext db = new ApplicationContext(false))
+    //     {
+    //         HashSet<Movie> actorMovies = new HashSet<Movie>();
+    //         HashSet<Movie> directorMovies = new HashSet<Movie>();
+
+    //         Parallel.ForEach(db.Movies.Include(m => m.Actors).Include(m => m.Director), movie =>
+    //         {
+    //             foreach(Actor a in movie.Actors)
+    //             {
+    //                 if(a.Code == actor.Code)
+    //                 {
+    //                     actorMovies.Add(movie);
+    //                 }
+    //             }
+    //             foreach (Actor a in movie.Director)
+    //             {
+    //                 if (a.Code == actor.Code)
+    //                 {
+    //                     directorMovies.Add(movie);
+    //                 }
+    //             }
+    //         });
+    //         actor.Movies = actorMovies;
+    //         actor.DirectedMovies = directorMovies;
+    //     }
+    // }
+}
